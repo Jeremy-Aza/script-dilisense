@@ -12,12 +12,16 @@ import re
 # data = reader.head()
 
 name = list()
-data = []
+date = list()
+dataUser = dict()
+dataAlmacenar = []
 
 
-def api_url(name):
-    for index in range(0, len(name)):
-        url = f'https://api.dilisense.com/v1/checkIndividual?names={name[index]}&fuzzy_search=1'
+def api_url(newData):
+    count = len(newData[0])
+    #Pass the name and the date of birthday
+    for i in range(0, count):
+        url = f'https://api.dilisense.com/v1/checkIndividual?names={newData[0][i]}&fuzzy_search=1&dob={newData[1][i]}'
         payload = {}
 
         headers = {
@@ -27,7 +31,7 @@ def api_url(name):
         response = requests.request("GET", url, headers=headers, data=payload)
         # print(response.text)
         jsonData = response.json()
-        # print(jsonData)
+        print(jsonData)
 
         # Titles
         no_data = "Sin datos"
@@ -65,32 +69,36 @@ def api_url(name):
             name_found = found_records["name"]
             source_id = found_records["source_id"]
 
-        if(len(jsonData["found_records"]) > 1):
-            links = jsonData["found_records"][0]["links"]
+        """ if(len(jsonData["found_records"]) > 1):
+            links = jsonData["found_records"][0]["links"] """
 
-        data.append(
-            {name_title: name[index],
+        dataAlmacenar.append(
+            {name_title: name[i],
              timestamp_title: jsonData["timestamp"],
              total_hits_title: jsonData["total_hits"],
              gender_title: gender if len(jsonData["found_records"]) > 0 else no_data,
-             date_of_birth_title: date_of_birth if len(jsonData["found_records"]) > 0 else no_data,
-             citizenship_title: citizenship if len(jsonData["found_records"]) > 0 else no_data,
-             source_type_title: source_type if len(jsonData["found_records"]) > 0 else no_data,
-             given_names_title: given_names if len(jsonData["found_records"]) > 0 else no_data,
-             description_title: description if len(jsonData["found_records"]) > 0 else no_data,
-             occupations_title: occupations if len(jsonData["found_records"]) > 0 else no_data,
-             place_of_birth_title: place_of_birth if len(jsonData["found_records"]) > 0 else no_data,
-             entity_type_title: entity_type if len(jsonData["found_records"]) > 0 else no_data,
-             pep_type_title: pep_type if len(jsonData["found_records"]) > 0 else no_data,
-             name_found_title: name_found if len(jsonData["found_records"]) > 0 else no_data,
-             source_id_title: source_id if len(jsonData["found_records"]) > 0 else no_data,
-             links_title: links if len(jsonData["found_records"]) > 1 else no_data,
              })
+
+        """ 
+        This data should be to inside the dataAlmacenar.append
+        
+        date_of_birth_title: date_of_birth if len(jsonData["found_records"]) > 0 else no_data,
+        citizenship_title: citizenship if len(jsonData["found_records"]) > 0 else no_data,
+        source_type_title: source_type if len(jsonData["found_records"]) > 0 else no_data,
+        given_names_title: given_names if len(jsonData["found_records"]) > 0 else no_data,
+        description_title: description if len(jsonData["found_records"]) > 0 else no_data,
+        occupations_title: occupations if len(jsonData["found_records"]) > 0 else no_data,
+        place_of_birth_title: place_of_birth if len(jsonData["found_records"]) > 0 else no_data,
+        entity_type_title: entity_type if len(jsonData["found_records"]) > 0 else no_data,
+        pep_type_title: pep_type if len(jsonData["found_records"]) > 0 else no_data,
+        name_found_title: name_found if len(jsonData["found_records"]) > 0 else no_data,
+        source_id_title: source_id if len(jsonData["found_records"]) > 0 else no_data,
+        links_title: links if len(jsonData["found_records"]) > 1 else no_data, """
 
     # Create DataFrame
     df = pd.DataFrame()
     # print(data)
-    df = df.append(data, ignore_index=True)
+    df = df.append(dataAlmacenar, ignore_index=True)
     print(df)
 
     # Save excel
@@ -135,8 +143,19 @@ reader = pd.read_excel(path_file, chooice_sheet["sheetDocs"])
 # print(reader)
 
 # Data user
+dataUser = []
+nameUser = dict()
+dateUser = dict()
+
 for tags, contenido in reader.items():
-    if(tags == "Name" or tags == "Nombre" or tags == "name" or tags == "nombre" or tags == "Full Name" or tags == "Nombre Completo"):
-        # print(contenido.to_dict())
-        # Call API
-        api_url(contenido.to_list())
+    if(tags == "Nombre"):
+        name = contenido
+
+    if(tags == "NACIMIENTO"):
+        date = contenido
+
+    dataUser = [name, date]
+
+# Call API
+# print(dataUser)
+api_url(dataUser)
