@@ -1,0 +1,8 @@
+Get token
+
+curl --location 'https://veridocid.azure-api.net/api/auth/token' \
+ --header 'Content-Type: application/x-www-form-urlencoded' \
+ --data-urlencode 'grant_type=client_credentials' \
+ --data-urlencode 'client_id=Ej4QpQ33HYwZ2JXYTLCf6c1li3vTLhjm' \
+ --data-urlencode 'client_secret=DCpJ_-Bd2285RGBlTPEZkBh5_j-p7yZoMVUH2ei80FYPBkM7yGH4WvNvhX_NA88m' \
+ --data-urlencode 'audience=veridocid'
