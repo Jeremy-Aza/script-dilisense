@@ -9,7 +9,7 @@ name = list()
 dataUser = dict()
 dataAlmacenar = []
 logs = []
-file_name = "blacklist_entity_CredencialesLeaseForU"
+file_name = "blacklist_entity_name"
 
 
 # Token

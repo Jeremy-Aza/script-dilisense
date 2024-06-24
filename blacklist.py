@@ -16,7 +16,7 @@ date = list()
 dataUser = dict()
 dataAlmacenar = []
 logs = []
-file_name = "data"
+file_name = "blacklist_name"
 
 
 # Token
