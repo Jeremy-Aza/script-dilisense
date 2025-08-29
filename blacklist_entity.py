@@ -4,35 +4,40 @@ import inquirer
 import getpass
 import re
 import json
+import time
 
 name = list()
 dataUser = dict()
 dataAlmacenar = []
 logs = []
-file_name = "blacklist_entity_name"
+file_name = "name_entity_date"
 
 
 # Token
 def get_token():
-    with open("token.txt") as file:
-        token = file.readline().strip()
+    try:
+        with open("token.txt") as file:
+            token_data = json.load(file)
+        token = token_data["token"]
+        expiration = token_data["expiration"]
+        return token, expiration
+    except (FileNotFoundError, KeyError):
+        return None, None
 
-    return token
-
-
-def update_token(token):
+def update_token(token, expires_in):
+    expiration = time.time() + expires_in
     with open("token.txt", "w") as file:
-        file.write(token)
+        json.dump({"token": token, "expiration": expiration}, file)
 
 
 def api_url(newData):
     count = len(newData[0])
-    token = get_token()
+    token, expiration = get_token()
 
     # Pass the names
     for i in range(0, count):
         url = f"https://veridocid.azure-api.net/api/blacklistentity"
-        payload = {"id": f"batch-{i}", "names": f"{newData[0][i]}"}
+        payload = {"id": f"name_entity_date-{i}", "names": f"{newData[0][i]}"}
 
         headers = {
             "Content-Type": "application/json",
@@ -49,7 +54,7 @@ def api_url(newData):
                     raise Exception("No se pudo obtener un nuevo token")
 
                 # Actualizar el token en el archivo "token.txt"
-                update_token(new_token)
+                update_token(new_token, expires_in)
                 token = new_token
 
                 # Reintentar la solicitud con el nuevo token
@@ -132,6 +137,8 @@ def get_new_token():
         response.raise_for_status()
         token_data = response.json()
         new_token = token_data["access_token"]
+        expires_in = token_data["expires_in"]  # Obtener tiempo de expiración
+        update_token(new_token, expires_in)
         return new_token
     except requests.exceptions.RequestException as err:
         print(f"Error al obtener el nuevo token: {err}")
