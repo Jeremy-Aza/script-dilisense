@@ -6,3 +6,21 @@ curl --location 'https://veridocid.azure-api.net/api/auth/token' \
  --data-urlencode 'client_id=Ej4QpQ33HYwZ2JXYTLCf6c1li3vTLhjm' \
  --data-urlencode 'client_secret=DCpJ_-Bd2285RGBlTPEZkBh5_j-p7yZoMVUH2ei80FYPBkM7yGH4WvNvhX_NA88m' \
  --data-urlencode 'audience=veridocid'
+
+
+Alternativa con búsqueda y reemplazo (regex)
+
+1. Pulsa Ctrl + H (Windows/Linux) o Cmd + H (Mac).
+
+2. Activa la opción .* (expresiones regulares).
+
+3. En Buscar escribe:
+^(.+)$
+
+4. En Reemplazar con escribe:
+"$1",
+
+
+5. Pulsa Reemplazar todo.
+
+Esto pone comillas al inicio, comillas y coma al final de cada línea en un solo paso.
