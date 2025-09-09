@@ -5,31 +5,66 @@ import getpass
 import re
 import json
 import time
+import base64
 
 name = list()
 date = list()
 dataUser = dict()
 dataAlmacenar = []
 logs = []
-file_name = "blacklist_name"
-BATCH_SIZE = 5000  # Tamaño del lote
-MAX_RETRIES = 5  # Número máximo de reintentos
+file_name = "name_blacklist_date"
+BATCH_SIZE = 20000  # Tamaño del lote
+MAX_RETRIES = 10  # Número máximo de reintentos
+INITIAL_BATCH = 500000
 
 # Token
-def get_token():
+def decode_jwt_exp(token):
+    """Decodifica el payload del JWT y devuelve el campo 'exp' como float."""
     try:
-        with open("token.txt") as file:
-            token_data = json.load(file)
-        token = token_data["token"]
-        expiration = token_data["expiration"]
-        return token, expiration
-    except (FileNotFoundError, KeyError):
+        payload_b64 = token.split(".")[1]
+        # Padding Base64
+        payload_b64 += '=' * (-len(payload_b64) % 4)
+        payload_json = base64.urlsafe_b64decode(payload_b64).decode()
+        payload = json.loads(payload_json)
+        return float(payload.get("exp"))
+    except Exception as e:
+        print("Error al decodificar JWT:", e)
+        return None
+
+def get_token():
+    """Lee token.txt y devuelve (token, expiration_epoch_seconds)."""
+    try:
+        with open("token.txt", "r", encoding="utf-8") as f:
+            token_data = json.load(f)
+    except FileNotFoundError:
+        return None, None
+    except Exception as e:
+        print("Error leyendo token.txt:", e)
         return None, None
 
-def update_token(token, expires_in):
-    expiration = time.time() + expires_in
-    with open("token.txt", "w") as file:
-        json.dump({"token": token, "expiration": expiration}, file)
+    token = token_data.get("token")
+    if not token:
+        return None, None
+
+    exp = decode_jwt_exp(token)
+    return token, exp
+
+def update_token(token):
+    """Guarda token y su expiración (derivada del JWT) en token.txt."""
+    exp = decode_jwt_exp(token)
+    token_obj = {
+        "token": token,
+        "expiration": exp
+    }
+    with open("token.txt", "w", encoding="utf-8") as f:
+        json.dump(token_obj, f)
+    return exp
+
+def token_is_valid(expiration_ts, leeway=60):
+    """True si el token todavía es válido con un margen de `leeway` segundos."""
+    if expiration_ts is None:
+        return False
+    return time.time() < (expiration_ts - leeway)
 
 def api_url(newData):
     count = len(newData[0])
@@ -41,14 +76,16 @@ def api_url(newData):
         batch_logs = []
 
         for i in range(start, end):
-            if token is None or time.time() >= expiration - 60:  # Renovar token si está a punto de caducar (1 minuto de margen)
-                token = get_new_token()
+            real_index = i + INITIAL_BATCH
+
+            if token is None or not token_is_valid(expiration, leeway=60):
+                token, expiration = get_new_token()
                 if token is None:
                     raise Exception("No se pudo obtener un nuevo token")
             
             url = f"https://veridocid.azure-api.net/api/blacklist"
             payload = {
-                "id": f"batch-name-{i}",
+                "id": f"{file_name}-{real_index}",
                 "name": f"{newData[0][i]}",
                 "date_of_birth": f"{newData[1][i]}",
             }
@@ -64,7 +101,7 @@ def api_url(newData):
                     response = requests.post(url, headers=headers, json=payload)
 
                     if response.status_code == 401:  # Unauthorized
-                        token = get_new_token()
+                        token, expiration = get_new_token()
                         if token is None:
                             raise Exception("No se pudo obtener un nuevo token")
 
@@ -159,13 +196,16 @@ def get_new_token():
         response = requests.post(url, headers=headers, data=data)
         response.raise_for_status()
         token_data = response.json()
-        new_token = token_data["access_token"]
-        expires_in = token_data["expires_in"]  # Obtener tiempo de expiración
-        update_token(new_token, expires_in)
-        return new_token
+        new_token = token_data.get("access_token")
+        if not new_token:
+            print("Respuesta sin access_token")
+            return None, None
+
+        expiration = update_token(new_token)  # extrae exp del JWT y guarda
+        return new_token, expiration
     except requests.exceptions.RequestException as err:
         print(f"Error al obtener el nuevo token: {err}")
-        return None
+        return None, None
 
 def validate_input_path(value):
     regex_path = "[a-zA-Z]:[\\\/](?:[a-zA-Z0-9\-\_\.\¿'\¡\{\}\[\]\,\!\+\´\$\#\%\(\)\&\=]+[\\\/])*([a-zA-Z0-9\-\_\.\¿'\¡\{\}\[\]\,\!\+\´\$\#\%\(\)\&\=]+\.xlsx)"
