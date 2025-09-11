@@ -15,7 +15,7 @@ logs = []
 file_name = "name_blacklist_date"
 BATCH_SIZE = 20000  # Tamaño del lote
 MAX_RETRIES = 10  # Número máximo de reintentos
-INITIAL_BATCH = 500000
+INITIAL_BATCH = 0 # Índice inicial del lote
 
 # Token
 def decode_jwt_exp(token):
@@ -208,7 +208,7 @@ def get_new_token():
         return None, None
 
 def validate_input_path(value):
-    regex_path = "[a-zA-Z]:[\\\/](?:[a-zA-Z0-9\-\_\.\¿'\¡\{\}\[\]\,\!\+\´\$\#\%\(\)\&\=]+[\\\/])*([a-zA-Z0-9\-\_\.\¿'\¡\{\}\[\]\,\!\+\´\$\#\%\(\)\&\=]+\.xlsx)"
+    regex_path = r"[a-zA-Z]:[\\\/](?:[a-zA-Z0-9\-\_\.\¿'\¡\{\}\[\]\,\!\+\´\$\#\%\(\)\&\=]+[\\\/])*([a-zA-Z0-9\-\_\.\¿'\¡\{\}\[\]\,\!\+\´\$\#\%\(\)\&\=]+\.xlsx)"
     resultado = re.search(regex_path, value)
     return resultado
 
