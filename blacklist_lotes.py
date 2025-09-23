@@ -13,7 +13,7 @@ dataUser = dict()
 dataAlmacenar = []
 logs = []
 file_name = "name_blacklist_date"
-BATCH_SIZE = 20000  # Tamaño del lote
+BATCH_SIZE = 2000  # Tamaño del lote
 MAX_RETRIES = 10  # Número máximo de reintentos
 INITIAL_BATCH = 0 # Índice inicial del lote
 

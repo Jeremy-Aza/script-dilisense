@@ -5,6 +5,7 @@ import getpass
 import openpyxl
 import sys
 import re
+import json
 
 # reader = pd.read_excel("C:/Users/User/Desktop/test_dilisense.xlsx", "Hoja1")
 #reader = pd.read_excel("C:/Users/User/Desktop/test_dilisense.xlsx", "Hoja2")
@@ -15,12 +16,16 @@ name = list()
 date = list()
 dataUser = dict()
 dataAlmacenar = []
+logs = []
 
 
 def api_url(newData):
     count = len(newData[0])
     #Pass the name and the date of birthday
     for i in range(0, count):
+        batch_logs = []
+        batch_dataAlmacenar = []
+        
         url = f'https://api.dilisense.com/v1/checkIndividual?names={newData[0][i]}&fuzzy_search=1&dob={newData[1][i]}'
         payload = {}
 
@@ -31,7 +36,8 @@ def api_url(newData):
         response = requests.request("GET", url, headers=headers, data=payload)
         # print(response.text)
         jsonData = response.json()
-        print(jsonData)
+        batch_logs.append({"item": i, "data": jsonData})
+        print(json.dumps({"item": i, "data": jsonData}))
 
         # Titles
         no_data = "Sin datos"
@@ -58,21 +64,21 @@ def api_url(newData):
             found_records = jsonData["found_records"][0]
             gender = found_records["gender"]
             date_of_birth = found_records["date_of_birth"]
-            citizenship = found_records["citizenship"]
+            citizenship = found_records["citizenship"] if "citizenship" in found_records else no_data
             source_type = found_records["source_type"]
-            given_names = found_records["given_names"]
-            description = found_records["description"]
-            occupations = found_records["occupations"]
-            place_of_birth = found_records["place_of_birth"]
-            pep_type = found_records["pep_type"]
-            entity_type = found_records["entity_type"]
+            given_names = found_records["given_names"] if "given_names" in found_records else no_data
+            description = found_records["description"] if "description" in found_records else no_data
+            occupations = found_records["occupations"] if "occupations" in found_records else no_data
+            place_of_birth = found_records["place_of_birth"] if "place_of_birth" in found_records else no_data
+            pep_type = found_records["pep_type"] if "pep_type" in found_records else no_data
+            entity_type = found_records["entity_type"] if "entity_type" in found_records else no_data
             name_found = found_records["name"]
             source_id = found_records["source_id"]
 
         """ if(len(jsonData["found_records"]) > 1):
             links = jsonData["found_records"][0]["links"] """
 
-        dataAlmacenar.append(
+        batch_dataAlmacenar.append(
             {name_title: name[i],
              timestamp_title: jsonData["timestamp"],
              total_hits_title: jsonData["total_hits"],
@@ -80,7 +86,7 @@ def api_url(newData):
              })
 
         """ 
-        This data should be to inside the dataAlmacenar.append
+        This data should be to inside the batch_dataAlmacenar.append
         
         date_of_birth_title: date_of_birth if len(jsonData["found_records"]) > 0 else no_data,
         citizenship_title: citizenship if len(jsonData["found_records"]) > 0 else no_data,
@@ -95,11 +101,18 @@ def api_url(newData):
         source_id_title: source_id if len(jsonData["found_records"]) > 0 else no_data,
         links_title: links if len(jsonData["found_records"]) > 1 else no_data, """
 
+        # Agregar datos del lote al almacenamiento total
+        dataAlmacenar.extend(batch_dataAlmacenar)
+        logs.extend(batch_logs)
+        
     # Create DataFrame
-    df = pd.DataFrame()
+    df = pd.DataFrame(dataAlmacenar)
     # print(data)
-    df = df.append(dataAlmacenar, ignore_index=True)
     print(df)
+
+    # Guardar logs
+    with open(f"Resultados.json", "w") as file:
+        json.dump(logs, file)
 
     # Save excel
     route_user = 'C:/Users/'+getpass.getuser() + '/Desktop/Resultados.xlsx'
@@ -111,7 +124,7 @@ def api_url(newData):
 
 # Introduce the path file
 def validate_input_path(value):
-    regex_path = '[a-zA-Z]:[\\\/](?:[a-zA-Z0-9\-\_\.\¿\'\¡\{\}\[\]\,\!\+\´\$\#\%\(\)\&\=]+[\\\/])*([a-zA-Z0-9\-\_\.\¿\'\¡\{\}\[\]\,\!\+\´\$\#\%\(\)\&\=]+\.xlsx)'
+    regex_path = r"[a-zA-Z]:[\\\/](?:[a-zA-Z0-9\-\_\.\¿'\¡\{\}\[\]\,\!\+\´\$\#\%\(\)\&\=]+[\\\/])*([a-zA-Z0-9\-\_\.\¿'\¡\{\}\[\]\,\!\+\´\$\#\%\(\)\&\=]+\.xlsx)"
     resultado = re.search(regex_path, value)
     return resultado
 
@@ -144,17 +157,13 @@ reader = pd.read_excel(path_file, chooice_sheet["sheetDocs"])
 
 # Data user
 dataUser = []
-nameUser = dict()
-dateUser = dict()
+for column in reader.columns:
+    if column == "Nombres":
+        name = reader[column].tolist()
+    if column == "NACIMIENTO":
+        date = reader[column].tolist()
 
-for tags, contenido in reader.items():
-    if(tags == "Nombre"):
-        name = contenido
-
-    if(tags == "NACIMIENTO"):
-        date = contenido
-
-    dataUser = [name, date]
+dataUser = [name, date]
 
 # Call API
 # print(dataUser)
